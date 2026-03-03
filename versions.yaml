@@ -3,7 +3,7 @@
 
 module-sets:
   beta:
-    version: v0.142.2
+    version: v0.143.0
     modules:
       - github.com/newrelic/nrdot-collector-components
       - github.com/newrelic/nrdot-collector-components/cmd/codecovgen

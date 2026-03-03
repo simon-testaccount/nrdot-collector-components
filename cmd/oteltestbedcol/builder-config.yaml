@@ -6,35 +6,39 @@ dist:
   module: github.com/newrelic/nrdot-collector-components/cmd/oteltestbedcol
   name: oteltestbedcol
   description: OpenTelemetry Collector binary for testbed only tests.
-  version: 0.142.2-dev
+  version: 0.143.0-dev
   output_path: ./cmd/oteltestbedcol
 
 extensions:
-  - gomod: go.opentelemetry.io/collector/extension/zpagesextension v0.142.0
+  - gomod: go.opentelemetry.io/collector/extension/zpagesextension v0.143.0
 
 exporters:
-  - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.142.0
-  - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.142.0
-  - gomod: go.opentelemetry.io/collector/exporter/otlphttpexporter v0.142.0
-  - gomod: github.com/newrelic/nrdot-collector-components/exporter/nopexporter v0.142.2
+  - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.143.0
+  - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.143.0
+  - gomod: go.opentelemetry.io/collector/exporter/otlphttpexporter v0.143.0
+  - gomod: github.com/newrelic/nrdot-collector-components/exporter/nopexporter v0.143.0
 
 processors:
-  - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.142.0
-  - gomod: go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.142.0
-  - gomod: github.com/newrelic/nrdot-collector-components/processor/adaptivetelemetryprocessor v0.142.2
+  - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.143.0
+  - gomod: go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.143.0
+  - gomod: github.com/newrelic/nrdot-collector-components/processor/adaptivetelemetryprocessor v0.143.0
 
 receivers:
-  - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.142.0
-  - gomod: github.com/newrelic/nrdot-collector-components/receiver/nopreceiver v0.142.2
+  - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.143.0
+  - gomod: github.com/newrelic/nrdot-collector-components/receiver/nopreceiver v0.143.0
 
 providers:
-  - gomod: go.opentelemetry.io/collector/confmap/provider/envprovider v1.48.0
-  - gomod: go.opentelemetry.io/collector/confmap/provider/fileprovider v1.48.0
-  - gomod: go.opentelemetry.io/collector/confmap/provider/httpprovider v1.48.0
-  - gomod: go.opentelemetry.io/collector/confmap/provider/httpsprovider v1.48.0
-  - gomod: go.opentelemetry.io/collector/confmap/provider/yamlprovider v1.48.0
+  - gomod: go.opentelemetry.io/collector/confmap/provider/envprovider v1.49.0
+  - gomod: go.opentelemetry.io/collector/confmap/provider/fileprovider v1.49.0
+  - gomod: go.opentelemetry.io/collector/confmap/provider/httpprovider v1.49.0
+  - gomod: go.opentelemetry.io/collector/confmap/provider/httpsprovider v1.49.0
+  - gomod: go.opentelemetry.io/collector/confmap/provider/yamlprovider v1.49.0
 
 # When using `make genoteltestbedcol`, the `replaces` content is appended to this
 # file before passing it to OCB, to ensure that local versions are used for all
 # nrdot modules.
 replaces:
+  # Security fix: GO-2026-4394 - remove when collector v0.146.0 is adopted
+  - go.opentelemetry.io/otel/sdk v1.39.0 => go.opentelemetry.io/otel/sdk v1.40.0
+  - go.opentelemetry.io/otel/sdk/log v0.14.0 => go.opentelemetry.io/otel/sdk/log v0.15.0
+  - go.opentelemetry.io/otel/sdk/metric v1.39.0 => go.opentelemetry.io/otel/sdk/metric v1.40.0
