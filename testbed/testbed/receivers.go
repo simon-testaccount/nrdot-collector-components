@@ -90,7 +90,7 @@ func (bor *BaseOTLPDataReceiver) Start(tc consumer.Traces, mc consumer.Metrics, 
 		if err := InsertDefault(&cfg.HTTP); err != nil {
 			return err
 		}
-		cfg.HTTP.Get().ServerConfig.Endpoint = fmt.Sprintf("127.0.0.1:%d", bor.Port)
+		cfg.HTTP.Get().ServerConfig.NetAddr = confignet.AddrConfig{Endpoint: fmt.Sprintf("127.0.0.1:%d", bor.Port), Transport: confignet.TransportTypeTCP}
 	}
 
 	var err error
