@@ -46,6 +46,7 @@ jobs:
           exec > >(tee log.out) 2>&1
           LAST_COMMIT="$(git -C ./opentelemetry-collector/ rev-parse HEAD)"
           LAST_CONTRIB_COMMIT="$(git -C ./opentelemetry-collector-contrib/ rev-parse HEAD)"
+          GO_VERSION="$(grep '^go ' ./opentelemetry-collector/service/go.mod | awk '{print $2}')"
           cd nrdot-collector-components
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -54,6 +55,7 @@ jobs:
           make gennrdotcol
           echo "LAST_COMMIT=$LAST_COMMIT" >> "$GITHUB_ENV"
           echo "LAST_CONTRIB_COMMIT=$LAST_CONTRIB_COMMIT" >> "$GITHUB_ENV"
+          echo "GO_VERSION=$GO_VERSION" >> "$GITHUB_ENV"
           echo "BRANCH_NAME=$branch" >> "$GITHUB_ENV"
       - name: Gets packages from links with retries
         uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
@@ -64,7 +66,7 @@ jobs:
           retry_on: error
           command: |
             cd nrdot-collector-components
-            make update-otel OTEL_STABLE_VERSION=${{ env.LAST_COMMIT }} OTEL_VERSION=${{ env.LAST_COMMIT }} CONTRIB_VERSION=${{ env.LAST_CONTRIB_COMMIT }}
+            make update-otel OTEL_STABLE_VERSION=${{ env.LAST_COMMIT }} OTEL_VERSION=${{ env.LAST_COMMIT }} CONTRIB_VERSION=${{ env.LAST_CONTRIB_COMMIT }} GO_VERSION=${{ env.GO_VERSION }}
       - name: Push and create PR
         run: |
           cd nrdot-collector-components
