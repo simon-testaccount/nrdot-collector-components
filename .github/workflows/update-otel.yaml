@@ -71,7 +71,42 @@ jobs:
         run: |
           cd nrdot-collector-components
           git push --set-upstream origin ${{ env.BRANCH_NAME }}
-          gh pr create --base main --title "[chore] Update core dependencies" --body "This PR updates the opentelemetry-collector modules to open-telemetry/opentelemetry-collector@${{ env.LAST_COMMIT }}" --draft
+          PR_URL=$(gh pr create --base main --title "[chore] Update core dependencies" --body "This PR updates the opentelemetry-collector modules to open-telemetry/opentelemetry-collector@${{ env.LAST_COMMIT }}" --draft)
+          echo "PR_URL=$PR_URL" >> "$GITHUB_ENV"
+          PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$')
+          echo "PR_NUMBER=$PR_NUMBER" >> "$GITHUB_ENV"
+          echo "Created PR #$PR_NUMBER"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Auto-merge if minor version matches
+        run: |
+          cd nrdot-collector-components
+          # Extract current version from versions.yaml
+          CURRENT_VERSION=$(grep 'version: v' versions.yaml | head -1 | awk '{print $2}' | sed 's/v//')
+          echo "Current version: $CURRENT_VERSION"
+
+          # Get target version from upstream collector repo
+          cd ../opentelemetry-collector
+          TARGET_VERSION=$(git describe --tags --abbrev=0 | sed 's/v//')
+          echo "Target version: $TARGET_VERSION"
+
+          # Parse minor versions (format: 0.147.0 -> 147)
+          CURRENT_MINOR=$(echo "$CURRENT_VERSION" | cut -d'.' -f2)
+          TARGET_MINOR=$(echo "$TARGET_VERSION" | cut -d'.' -f2)
+
+          echo "Current minor: $CURRENT_MINOR"
+          echo "Target minor: $TARGET_MINOR"
+
+          # Enable auto-merge if minor versions match
+          if [ "$CURRENT_MINOR" == "$TARGET_MINOR" ]; then
+            echo "Minor versions match - Automerging PR #${{ env.PR_NUMBER }}"
+            cd ../nrdot-collector-components
+            gh pr ready ${{ env.PR_NUMBER }}
+            gh pr merge ${{ env.PR_NUMBER }} --auto --squash
+          else
+            echo "Minor version bump detected ($CURRENT_MINOR -> $TARGET_MINOR)"
+            echo "Manual review required for PR #${{ env.PR_NUMBER }} minor version update"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: File an issue if the workflow failed
