@@ -7,7 +7,7 @@ dist:
   module: github.com/newrelic/nrdot-collector-components/cmd/nrdotcol
   name: nrdotcol
   description: New Relic Dot Collector with additional components.
-  version: 0.147.0-dev
+  version: 0.147.1-dev
   output_path: ./cmd/nrdotcol
 
 extensions:
@@ -17,16 +17,16 @@ exporters:
   - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.147.0
   - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.147.0
   - gomod: go.opentelemetry.io/collector/exporter/otlphttpexporter v0.147.0
-  - gomod: github.com/newrelic/nrdot-collector-components/exporter/nopexporter v0.147.0
+  - gomod: github.com/newrelic/nrdot-collector-components/exporter/nopexporter v0.147.1
 
 processors:
   - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.147.0
   - gomod: go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.147.0
-  - gomod: github.com/newrelic/nrdot-collector-components/processor/adaptivetelemetryprocessor v0.147.0
+  - gomod: github.com/newrelic/nrdot-collector-components/processor/adaptivetelemetryprocessor v0.147.1
 
 receivers:
   - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.147.0
-  - gomod: github.com/newrelic/nrdot-collector-components/receiver/nopreceiver v0.147.0
+  - gomod: github.com/newrelic/nrdot-collector-components/receiver/nopreceiver v0.147.1
 
 connectors:
   - gomod: go.opentelemetry.io/collector/connector/forwardconnector v0.147.0

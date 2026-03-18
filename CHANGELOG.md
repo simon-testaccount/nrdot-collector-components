@@ -7,6 +7,17 @@ If you are looking for developer-facing changes, check out [CHANGELOG-API.md](./
 
 <!-- next version -->
 
+## v0.147.1
+
+### 💡 Enhancements 💡
+
+- `processor/adaptivetelemetry`: Add `process.atp.enabled` attribute to resources actively processed by the Adaptive Telemetry Processor (#175)
+  Resources that are included due to ATP filter evaluation (thresholds, anomaly detection, multi-metric, retention, include list, or zombie process detection) will now have the `process.atp.enabled=true` attribute set.
+  Resources included by default (those not targeted by ATP configuration) will not have this attribute.
+  
+
+<!-- previous-version -->
+
 ## v0.147.0
 
 <!-- previous-version -->
