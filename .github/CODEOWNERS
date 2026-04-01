@@ -29,3 +29,6 @@ receiver/nopreceiver/                 @newrelic/otelcomm
 testbed/                              @newrelic/otelcomm
 
 # End components list
+
+# Changelog ownership for components
+.chloggen/atp_*.yaml        @newrelic/dbi @newrelic/ohai
