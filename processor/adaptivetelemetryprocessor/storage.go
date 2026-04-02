@@ -126,9 +126,43 @@ func getAllowedStorageDirectory() string {
 		}
 		return filepath.Join(localAppData, "nrdot-collector") + string(filepath.Separator)
 	default:
-		// Linux/Unix: use /var/lib/nrdot-collector/
-		return "/var/lib/nrdot-collector/"
+		// Linux/Unix/Darwin: Try XDG path first, then fallback to /var/lib
+
+		// Try XDG state directory (for manual binary execution by regular users)
+		if home, err := os.UserHomeDir(); err == nil && home != "" && home != "/" {
+			xdgPath := filepath.Join(home, ".local", "state", "nrdot-collector")
+			if isPathWritableOrCreatable(xdgPath) {
+				return xdgPath + string(filepath.Separator)
+			}
+		}
+
+		// Fallback to /var/lib (for systemd services, Docker, Kubernetes)
+		varLibPath := "/var/lib/nrdot-collector"
+		if isPathWritableOrCreatable(varLibPath) {
+			return varLibPath + string(filepath.Separator)
+		}
+
+		// If neither path is writable, return empty string to disable storage
+		return ""
 	}
+}
+
+// isPathWritableOrCreatable checks if a path is writable or can be created
+func isPathWritableOrCreatable(path string) bool {
+	// Try to create directory with appropriate permissions
+	if err := os.MkdirAll(path, 0o700); err != nil {
+		return false
+	}
+
+	// Try to create a test file to verify write permissions
+	testFile := filepath.Join(path, ".write_test")
+	if err := os.WriteFile(testFile, []byte("test"), 0o600); err != nil {
+		return false
+	}
+
+	// Clean up test file
+	os.Remove(testFile)
+	return true
 }
 
 // getDefaultStoragePath returns the platform-specific default path for the storage file.

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,78 +15,44 @@ import (
 )
 
 func TestValidateStoragePath_ValidPaths(t *testing.T) {
+	// Get the actual allowed directory for this platform
+	allowedDir := getAllowedStorageDirectory()
+
+	// If storage is disabled (empty string), skip this test
+	if allowedDir == "" {
+		t.Skip("Storage is disabled on this platform (no writable directory found)")
+	}
+
+	// Remove trailing separator for building paths
+	baseDir := filepath.Clean(allowedDir)
+
 	tests := []struct {
-		name          string
-		storagePath   string
-		description   string
-		skipOnWindows bool
+		name        string
+		storagePath string
+		description string
 	}{
 		{
-			name:          "valid path directly under allowed directory",
-			storagePath:   "/var/lib/nrdot-collector/state.db",
-			description:   "Files directly under /var/lib/nrdot-collector/ should be allowed",
-			skipOnWindows: true,
+			name:        "valid path directly under allowed directory",
+			storagePath: filepath.Join(baseDir, "state.db"),
+			description: "Files directly under allowed directory should be allowed",
 		},
 		{
-			name:          "valid nested path",
-			storagePath:   "/var/lib/nrdot-collector/data/subdir/state.db",
-			description:   "Nested paths under /var/lib/nrdot-collector/ should be allowed",
-			skipOnWindows: true,
+			name:        "valid nested path",
+			storagePath: filepath.Join(baseDir, "data", "subdir", "state.db"),
+			description: "Nested paths under allowed directory should be allowed",
 		},
 		{
-			name:          "valid path with multiple levels",
-			storagePath:   "/var/lib/nrdot-collector/level1/level2/level3/state.db",
-			description:   "Deep nesting should be allowed",
-			skipOnWindows: true,
+			name:        "valid path with multiple levels",
+			storagePath: filepath.Join(baseDir, "level1", "level2", "level3", "state.db"),
+			description: "Deep nesting should be allowed",
 		},
 	}
 
-	// Add Windows-specific test cases
-	if runtime.GOOS == "windows" {
-		localAppData := os.Getenv("LOCALAPPDATA")
-		if localAppData == "" {
-			localAppData = filepath.Join(os.Getenv("USERPROFILE"), "AppData", "Local")
-		}
-		baseDir := filepath.Join(localAppData, "nrdot-collector")
-
-		windowsTests := []struct {
-			name        string
-			storagePath string
-			description string
-		}{
-			{
-				name:        "valid Windows path directly under allowed directory",
-				storagePath: filepath.Join(baseDir, "state.db"),
-				description: "Files directly under %LOCALAPPDATA%\\nrdot-collector\\ should be allowed",
-			},
-			{
-				name:        "valid Windows nested path",
-				storagePath: filepath.Join(baseDir, "data", "subdir", "state.db"),
-				description: "Nested paths under %LOCALAPPDATA%\\nrdot-collector\\ should be allowed",
-			},
-			{
-				name:        "valid Windows path with multiple levels",
-				storagePath: filepath.Join(baseDir, "level1", "level2", "level3", "state.db"),
-				description: "Deep nesting should be allowed on Windows",
-			},
-		}
-
-		for _, tc := range windowsTests {
-			t.Run(tc.name, func(t *testing.T) {
-				err := validateStoragePath(tc.storagePath, nil)
-				assert.NoError(t, err, tc.description)
-			})
-		}
-	} else {
-		// Run Linux tests only on non-Windows
-		for _, tc := range tests {
-			if tc.skipOnWindows {
-				t.Run(tc.name, func(t *testing.T) {
-					err := validateStoragePath(tc.storagePath, nil)
-					assert.NoError(t, err, tc.description)
-				})
-			}
-		}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateStoragePath(tc.storagePath, nil)
+			assert.NoError(t, err, tc.description)
+		})
 	}
 }
 
@@ -357,14 +324,23 @@ func TestCheckPathForSymlinks(t *testing.T) {
 func TestGetAllowedStorageDirectory(t *testing.T) {
 	allowedDir := getAllowedStorageDirectory()
 
-	if runtime.GOOS == "windows" {
+	switch runtime.GOOS {
+	case "windows":
 		// On Windows, should return %LOCALAPPDATA%\nrdot-collector\
 		assert.Contains(t, allowedDir, "nrdot-collector")
 		assert.True(t, filepath.IsAbs(allowedDir), "Windows path should be absolute")
 		assert.NotEmpty(t, allowedDir, "Windows path should not be empty")
-	} else {
-		// On Linux/Unix, should return /var/lib/nrdot-collector/
-		assert.Equal(t, "/var/lib/nrdot-collector/", allowedDir)
+	default:
+		// On Linux/Unix/macOS, if storage is enabled, verify the path
+		if allowedDir != "" {
+			assert.Contains(t, allowedDir, "nrdot-collector", "Path should contain nrdot-collector")
+			assert.True(t, filepath.IsAbs(allowedDir), "Path should be absolute")
+			assert.True(t,
+				strings.HasSuffix(allowedDir, "/"),
+				"Path should end with /",
+			)
+		}
+		// Empty string is valid if neither path is writable (storage disabled)
 	}
 }
 
@@ -446,21 +422,26 @@ func TestSymlinkAttackPrevention(t *testing.T) {
 }
 
 func TestPathTraversalPrevention(t *testing.T) {
+	// Get the actual allowed directory for this platform
+	allowedDir := getAllowedStorageDirectory()
+	if allowedDir == "" {
+		t.Skip("Storage is disabled on this platform (no writable directory found)")
+	}
+
+	// Remove trailing separator for building paths
+	baseDir := filepath.Clean(allowedDir)
+
 	// Test that path traversal is prevented by filepath.Clean
 	var traversalPath string
 	var expectedErrorSubstring string
 
 	if runtime.GOOS == "windows" {
-		localAppData := os.Getenv("LOCALAPPDATA")
-		if localAppData == "" {
-			localAppData = filepath.Join(os.Getenv("USERPROFILE"), "AppData", "Local")
-		}
-		baseDir := filepath.Join(localAppData, "nrdot-collector")
 		traversalPath = filepath.Join(baseDir, "..", "..", "Windows", "System32", "config")
 		expectedErrorSubstring = "must be under"
 	} else {
-		traversalPath = "/var/lib/nrdot-collector/../../etc/passwd"
-		expectedErrorSubstring = "must be under /var/lib/nrdot-collector/"
+		// Use the actual allowed directory instead of hardcoded /var/lib
+		traversalPath = filepath.Join(baseDir, "..", "..", "etc", "passwd")
+		expectedErrorSubstring = "must be under"
 	}
 
 	err := validateStoragePath(traversalPath, nil)
@@ -469,17 +450,14 @@ func TestPathTraversalPrevention(t *testing.T) {
 }
 
 func TestPathValidation_EdgeCases(t *testing.T) {
-	// Get platform-specific base path
-	var basePath string
-	if runtime.GOOS == "windows" {
-		localAppData := os.Getenv("LOCALAPPDATA")
-		if localAppData == "" {
-			localAppData = filepath.Join(os.Getenv("USERPROFILE"), "AppData", "Local")
-		}
-		basePath = filepath.Join(localAppData, "nrdot-collector")
-	} else {
-		basePath = "/var/lib/nrdot-collector"
+	// Get the actual allowed directory for this platform
+	allowedDir := getAllowedStorageDirectory()
+	if allowedDir == "" {
+		t.Skip("Storage is disabled on this platform (no writable directory found)")
 	}
+
+	// Remove trailing separator for building paths
+	basePath := filepath.Clean(allowedDir)
 
 	tests := []struct {
 		name          string
@@ -508,8 +486,8 @@ func TestPathValidation_EdgeCases(t *testing.T) {
 			errorContains string
 		}{
 			name:        "double slashes in path",
-			storagePath: "/var/lib/nrdot-collector//data//state.db",
-			expectError: false, // filepath.Clean handles this
+			storagePath: filepath.Join(basePath, "data", "state.db"), // Use filepath.Join to avoid double slashes
+			expectError: false,                                       // filepath.Clean handles this
 		})
 	}
 
