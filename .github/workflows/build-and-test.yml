@@ -21,6 +21,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-24.04
+    if: ${{ github.actor != 'dependabot[bot]' }}
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      src: ${{ steps.filter.outputs.src }}
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        id: filter
+        with:
+          filters: |
+            src:
+              - '**/*.go'
+              - '**/go.mod'
+              - '**/go.sum'
+              - '.codecov.yml'
   setup-environment:
     timeout-minutes: 30
     runs-on: ubuntu-24.04
@@ -294,7 +313,8 @@ jobs:
           fi
   coverage:
     runs-on: ubuntu-24.04
-    needs: [unittest]
+    needs: [changes, unittest]
+    if: needs.changes.outputs.src == 'true' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
       - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
