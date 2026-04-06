@@ -128,7 +128,13 @@ jobs:
         if: steps.go-setup.outputs.cache-hit != 'true'
         run: make install-tools
       - name: Run `govulncheck`
-        run: make -j2 gogovulncheck GROUP=${{ matrix.group }}
+        run: |
+          out=$(mktemp)
+          make -j2 gogovulncheck GROUP=${{ matrix.group }} 2>&1 | tee "$out"
+          [[ ${PIPESTATUS[0]} -eq 0 ]] && exit 0
+          new=$(comm -23 <(grep -oE 'GO-[0-9]+-[0-9]+' "$out" | sort -u) \
+                         <(grep -v '^#' .govulncheck-exceptions | sort -u))
+          [[ -z "$new" ]] || { echo "::error::New vulnerabilities found: $new"; exit 1; }
   checks:
     runs-on: ubuntu-24.04
     needs: [setup-environment]
@@ -238,7 +244,7 @@ jobs:
       # - On main, with the go version that we didn't run the JUnit tests with.
       - name: Run Unit Tests
         id: tests
-        if: github.ref != 'refs/heads/main' || !startsWith( matrix.go-version, 'oldstable' )
+        if: (github.ref != 'refs/heads/main' && github.event_name != 'pull_request') || !startsWith( matrix.go-version, 'oldstable' )
         run: make gotest GROUP=${{ matrix.group }}
 
       # JUnit tests are super long, so we only run them for one go version.
@@ -246,11 +252,11 @@ jobs:
       # merged to main, so we don't run them on every PR.
       - name: Run Unit Tests With JUnit and Coverage
         id: tests-with-junit
-        if: startsWith( matrix.go-version, 'oldstable' ) && github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: startsWith( matrix.go-version, 'oldstable' ) && (github.event_name == 'pull_request' || (github.ref == 'refs/heads/main' && github.event_name == 'push'))
         continue-on-error: true # Allow uploading artifacts even if the test fails
         run: make gotest-with-junit-and-cover GROUP=${{ matrix.group }}
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
-        if: startsWith( matrix.go-version, 'oldstable' ) && github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: startsWith( matrix.go-version, 'oldstable' ) && (github.event_name == 'pull_request' || (github.ref == 'refs/heads/main' && github.event_name == 'push'))
         with:
           name: coverage-artifacts-${{ matrix.go-version }}-${{ matrix.runner }}-${{ matrix.group }}
           path: ${{ matrix.group }}-coverage.txt

@@ -1,0 +1,9 @@
+# Vulnerabilities with no upstream fix available. Remove entries when resolved.
+
+# GO-2026-4883: Off-by-one error in Moby plugin privilege validation (CVE-2026-33997)
+# GO-2026-4887: Moby AuthZ plugin bypass with oversized request body (CVE-2026-34040)
+# Both affect github.com/docker/docker (transitive via testcontainers-go, test-only).
+# Fixed in Docker Engine 29.3.1 but no corresponding go module release exists yet.
+# Tracking: https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/47350
+GO-2026-4883
+GO-2026-4887
