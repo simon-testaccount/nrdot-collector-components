@@ -72,3 +72,12 @@ jobs:
           gh release create "$TAG" -t ${{ steps.release-title.outputs.title }} -F release-notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Send notification to Slack
+        if: failure()
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          webhook: ${{ secrets.OTELCOMM_BOTS_SLACK_HOOK }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: ":rotating_light: sourcecode-release workflow failed - https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }} :rotating_light:"

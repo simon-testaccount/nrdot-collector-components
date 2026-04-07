@@ -20,6 +20,23 @@ jobs:
         with:
           path: nrdot-collector-components
 
+      - name: Check if current version has been released
+        run: |
+          cd nrdot-collector-components
+          CURRENT_VERSION=$(grep 'version: v' versions.yaml | head -1 | awk '{print $2}')
+          echo "Current version: $CURRENT_VERSION"
+
+          if ! gh release view "$CURRENT_VERSION" &>/dev/null; then
+            echo "Current version $CURRENT_VERSION has not been released yet"
+            echo "Cannot proceed with updating dependencies until current version is released"
+            exit 1
+          fi
+
+          echo "Current version $CURRENT_VERSION has been released"
+          echo "Proceeding with dependency update"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Pull the latest collector repo
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
@@ -154,7 +171,7 @@ jobs:
         run: |
           job_url="$(gh run view ${{ github.run_id }} -R ${{ github.repository }} --json jobs -q '.jobs[] | select(.name == "update-otel") | .url')"
           body="$(printf '[Link to job log](%s)
-          
+
           <details>
           <summary>Last 100 lines of log</summary>
 
@@ -165,3 +182,12 @@ jobs:
           gh issue create -R ${{ github.repository }} -t 'update-otel workflow failed' -b "$body" -l 'ci-cd'
         env:
           GH_TOKEN: ${{ github.token }}
+
+      - name: Send notification to Slack
+        if: failure()
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          webhook: ${{ secrets.OTELCOMM_BOTS_SLACK_HOOK }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: ":rotating_light: update-otel workflow failed - https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }} :rotating_light:"
