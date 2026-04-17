@@ -35,10 +35,12 @@ jobs:
         with:
           repository: open-telemetry/opentelemetry-collector
           path: opentelemetry-collector
+          fetch-tags: true
 
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
           path: nrdot-collector-components
+          fetch-tags: true
 
       - name: Close pending update-otel PRs
         run: |
@@ -98,13 +100,16 @@ jobs:
               # No existing tags for this minor version, start at .0
               CANDIDATE="${CANDIDATE_PREFIX}.0"
             else
-              # Use the latest patch version found
-              CANDIDATE="$HIGHEST_PATCH"
+              # Increment the patch version since this version already exists
+              PATCH=$(echo "$HIGHEST_PATCH" | cut -d'.' -f3)
+              NEXT_PATCH=$((PATCH + 1))
+              CANDIDATE="${CANDIDATE_PREFIX}.${NEXT_PATCH}"
             fi
 
             echo "candidate-beta=$CANDIDATE" >> $GITHUB_OUTPUT
 
-            echo "sync-upstream=${{ inputs.sync-upstream }}" >> $GITHUB_OUTPUT
+            SYNC_UPSTREAM="${{ inputs.sync-upstream }}"
+            echo "sync-upstream=${SYNC_UPSTREAM:-true}" >> $GITHUB_OUTPUT
           else
             echo "Using provided input versions"
             echo "current-beta=${{ inputs.current-beta }}" >> $GITHUB_OUTPUT

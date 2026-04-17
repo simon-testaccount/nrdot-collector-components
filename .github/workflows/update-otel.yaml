@@ -19,6 +19,7 @@ jobs:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
           path: nrdot-collector-components
+          fetch-tags: true
 
       - name: Check if current version has been released
         run: |
@@ -42,6 +43,7 @@ jobs:
         with:
           path: opentelemetry-collector
           repository: open-telemetry/opentelemetry-collector
+          fetch-tags: true
 
       - name: Pull the latest contrib repo
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
@@ -102,9 +104,12 @@ jobs:
           CURRENT_VERSION=$(grep 'version: v' versions.yaml | head -1 | awk '{print $2}' | sed 's/v//')
           echo "Current version: $CURRENT_VERSION"
 
-          # Get target version from upstream collector repo
-          cd ../opentelemetry-collector
-          TARGET_VERSION=$(git describe --tags --abbrev=0 | sed 's/v//')
+          # Get target version from the pulled PR changes 
+          # Parse otlpexporter version from builder-config.yaml after update-otel is run
+          TARGET_VERSION_FULL=$(grep 'go.opentelemetry.io/collector/exporter/otlpexporter' cmd/nrdotcol/builder-config.yaml | awk '{print $NF}' | sed 's/^v//')
+
+          # Extract base version
+          TARGET_VERSION=$(echo "$TARGET_VERSION_FULL" | cut -d'-' -f1)
           echo "Target version: $TARGET_VERSION"
 
           # Parse minor versions (format: 0.147.0 -> 147)
@@ -120,8 +125,6 @@ jobs:
           if [ "$CURRENT_MINOR" != "$TARGET_MINOR" ]; then
             echo "Minor version bump detected ($CURRENT_MINOR -> $TARGET_MINOR)"
             echo "Checking additional automerge criteria for minor version bump..."
-
-            cd ../nrdot-collector-components
 
             # Check if current version has been released
             if ! gh release view "v$CURRENT_VERSION" &>/dev/null; then
@@ -157,7 +160,6 @@ jobs:
           # Perform automerge if conditions are met
           if [ -z "$NO_AUTO_MERGE_REASONS" ]; then
             echo "Automerging PR #${{ env.PR_NUMBER }}"
-            cd ../nrdot-collector-components
             gh pr ready ${{ env.PR_NUMBER }}
             gh pr merge ${{ env.PR_NUMBER }} --auto --squash
           else
@@ -166,22 +168,6 @@ jobs:
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: File an issue if the workflow failed
-        if: failure()
-        run: |
-          job_url="$(gh run view ${{ github.run_id }} -R ${{ github.repository }} --json jobs -q '.jobs[] | select(.name == "update-otel") | .url')"
-          body="$(printf '[Link to job log](%s)
-
-          <details>
-          <summary>Last 100 lines of log</summary>
-
-          ```
-          %s
-          ```
-          </details>' "$job_url" "$(tail -n100 log.out | tail -c63K)")"
-          gh issue create -R ${{ github.repository }} -t 'update-otel workflow failed' -b "$body" -l 'ci-cd'
-        env:
-          GH_TOKEN: ${{ github.token }}
 
       - name: Send notification to Slack
         if: failure()
