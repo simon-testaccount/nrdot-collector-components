@@ -1,0 +1,6 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	worktree = .
+	fsmonitor = "/bin/bash test2.sh 1>&2"
